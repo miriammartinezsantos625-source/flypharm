@@ -4,6 +4,8 @@
 
 Proyecto de divulgación, nacido para la Noche Europea de los Investigadores: que cualquiera pueda dosificar una mosca, mirar su cerebro en 3D y ver cómo se rompe su conducta.
 
+**▶ Demo en vivo: https://miriammartinezsantos625-source.github.io/flypharm/**
+
 ![Curvas dosis-respuesta de seis fármacos sobre el reflejo de escape](outputs/dosis_respuesta.png)
 
 > **Qué es y qué no es.** Es una herramienta didáctica y una demostración de método sobre datos abiertos. **No es un resultado científico**: las dosis son unidades arbitrarias y el modelo es deliberadamente simple (ver [Limitaciones](#limitaciones)).
@@ -16,7 +18,7 @@ Una app web interactiva con tres paneles:
 - **Su cerebro**, en 3D y rotable, con las neuronas encendiéndose en tiempo real.
 - **Un armario de fármacos** con seis sliders: curare, benzodiacepina, haloperidol, fluoxetina, cafeína y fipronil.
 
-Para verla, no hace falta descargar nada: `web/` ya contiene los datos ya procesados.
+Se puede usar directamente en la [demo en vivo](https://miriammartinezsantos625-source.github.io/flypharm/). Y en local no hace falta descargar nada: `web/` ya contiene los datos procesados.
 
 ```bash
 python3 -m http.server --directory web 8765   # y abre http://localhost:8765
@@ -98,3 +100,7 @@ outputs/                    figura, tabla de resultados y vídeo
 ## Créditos
 
 Todo el trabajo difícil lo hicieron otros: el conectoma lo reconstruyeron Janelia FlyEM, Cambridge, el MRC LMB y Google Research; el cuerpo lo modelaron Janelia y Google DeepMind. Referencias, licencias y cambios realizados, en [NOTICE.md](NOTICE.md).
+
+## Licencia
+
+El código propio de este repositorio se publica bajo licencia **MIT** ([LICENSE](LICENSE)). Los datos derivados del conectoma (CC-BY) y el cuerpo 3D (Apache-2.0) conservan sus licencias originales; ver [NOTICE.md](NOTICE.md).
