@@ -1,0 +1,781 @@
+<meta charset="utf-8">
+<title>FlyPharm</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+  :root{
+    color-scheme: dark;
+    --fondo:#0c0f11; --panel:#12171a; --panel2:#171e21; --borde:#222c2f;
+    --tinta:#e6eae8; --tinta2:#8b9a96; --tinta3:#5d6b68;
+    --neural:#8fe3da; --acento:#4fd1c0;
+    --bien:#6fd98a; --ojo:#ffc24d; --mal:#ff6f6e;
+    --f-tit:'IBM Plex Sans Condensed',system-ui,sans-serif;
+    --f-txt:'IBM Plex Sans',system-ui,sans-serif;
+    --f-num:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--fondo);color:var(--tinta);font-family:var(--f-txt);
+       margin:0;padding:22px 20px 40px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .envoltorio{max-width:1220px;margin:0 auto}
+
+  .eyebrow{font-family:var(--f-num);font-size:10.5px;letter-spacing:.17em;
+           text-transform:uppercase;color:var(--tinta3);margin:0 0 8px}
+  h1{font-family:var(--f-tit);font-size:clamp(28px,4.2vw,44px);font-weight:700;
+     margin:0 0 6px;letter-spacing:-.015em;text-wrap:balance}
+  .entradilla{color:var(--tinta2);max-width:64ch;margin:0 0 22px;font-size:15px}
+  .entradilla b{color:var(--tinta);font-weight:500}
+
+  .escenario{display:grid;grid-template-columns:1.32fr 1fr;gap:14px}
+  @media(max-width:880px){.escenario{grid-template-columns:1fr}}
+  .caja{background:var(--panel);border:1px solid var(--borde);border-radius:10px;
+        overflow:hidden;display:flex;flex-direction:column}
+  .caja > header{display:flex;justify-content:space-between;align-items:baseline;
+        gap:12px;padding:11px 14px;border-bottom:1px solid var(--borde);background:var(--panel2)}
+  .caja h2{font-family:var(--f-tit);font-size:15.5px;font-weight:600;margin:0;letter-spacing:.005em}
+  .caja header span{font-family:var(--f-num);font-size:10px;letter-spacing:.13em;
+        text-transform:uppercase;color:var(--tinta3);text-align:right}
+  canvas{display:block;width:100%;background:#080b0c}
+  #arena3d{position:relative;aspect-ratio:760/782;background:#080b0c}
+  #arena3d canvas{width:100%!important;height:100%!important}
+  #motorBar{position:absolute;left:14px;bottom:12px;font-family:var(--f-num);font-size:10px;
+        letter-spacing:.06em;color:var(--tinta3);pointer-events:none}
+  #motorBar i{display:block;height:5px;width:90px;background:#1c2629;margin-top:4px;position:relative}
+  #motorBar i b{position:absolute;left:0;top:0;bottom:0;background:var(--neural);opacity:.9}
+  #motorBar i s{position:absolute;top:-3px;bottom:-3px;width:1px;background:rgba(143,227,218,.45);left:40.9%}
+  .pista{position:absolute;right:12px;top:10px;font-family:var(--f-num);font-size:9.5px;letter-spacing:.1em;
+        text-transform:uppercase;color:var(--tinta3);pointer-events:none}
+  #cerebro3d{position:relative;aspect-ratio:520/700;background:#080b0c;cursor:grab}
+  #cerebro3d canvas{width:100%!important;height:100%!important}
+  .pieCaja{padding:8px 14px;border-top:1px solid var(--borde);font-family:var(--f-num);
+        font-size:10.5px;color:var(--tinta3);letter-spacing:.06em;display:flex;
+        justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+  /* --- lecturas --- */
+  .lecturas{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--borde);
+        border:1px solid var(--borde);border-radius:10px;overflow:hidden;margin-top:14px}
+  @media(max-width:700px){.lecturas{grid-template-columns:repeat(2,1fr)}}
+  .lectura{background:var(--panel);padding:11px 13px}
+  .lectura dt{font-family:var(--f-num);font-size:9.5px;letter-spacing:.14em;
+        text-transform:uppercase;color:var(--tinta3);margin:0 0 3px}
+  .lectura dd{margin:0;font-family:var(--f-num);font-size:19px;font-weight:500;
+        font-variant-numeric:tabular-nums;color:var(--tinta)}
+  .lectura dd small{font-size:11px;color:var(--tinta2);font-weight:400}
+
+  /* --- estado --- */
+  #estado{margin-top:14px;border:1px solid var(--borde);border-radius:10px;
+        background:var(--panel);padding:13px 15px;display:flex;align-items:center;gap:13px;
+        min-height:74px}   /* altura fija: el texto cambia, el cuadro no se mueve */
+  #pastilla{font-family:var(--f-num);font-size:11px;font-weight:600;letter-spacing:.1em;
+        text-transform:uppercase;padding:5px 11px;border-radius:999px;white-space:nowrap;
+        border:1px solid currentColor;min-width:104px;text-align:center;flex-shrink:0}
+  #diagnostico{font-size:14px;color:var(--tinta2);display:-webkit-box;-webkit-line-clamp:2;
+        -webkit-box-orient:vertical;overflow:hidden;line-height:1.4}
+  #diagnostico b{color:var(--tinta);font-weight:500}
+
+  /* --- controles --- */
+  .controles{display:grid;grid-template-columns:1fr 1.5fr;gap:14px;margin-top:14px}
+  @media(max-width:880px){.controles{grid-template-columns:1fr}}
+  .bloque{background:var(--panel);border:1px solid var(--borde);border-radius:10px;padding:14px 15px 16px}
+  .bloque h3{font-family:var(--f-num);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+        color:var(--tinta3);margin:0 0 11px;font-weight:500}
+  .estimulos{display:flex;flex-direction:column;gap:6px}
+  .estimulos button{font-family:var(--f-txt);font-size:13.5px;text-align:left;cursor:pointer;
+        background:var(--panel2);color:var(--tinta2);border:1px solid var(--borde);
+        border-radius:7px;padding:9px 12px;transition:.13s}
+  .estimulos button:hover{color:var(--tinta);border-color:#33413f}
+  .estimulos button[aria-pressed="true"]{background:#16302d;border-color:var(--acento);color:#a7efe3}
+  .estimulos button:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+  .farmaco{display:grid;grid-template-columns:150px 1fr 46px;align-items:center;
+        gap:11px;padding:6px 0}
+  .farmaco + .farmaco{border-top:1px solid #1a2224}
+  .nombreF{font-size:13.5px;font-weight:500;line-height:1.25}
+  .nombreF small{display:block;font-family:var(--f-num);font-size:9.5px;color:var(--tinta3);
+        letter-spacing:.05em;font-weight:400;margin-top:2px}
+  .valorF{font-family:var(--f-num);font-size:12.5px;text-align:right;
+        font-variant-numeric:tabular-nums;color:var(--tinta2)}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;
+        background:#27312f;border-radius:3px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;
+        border-radius:50%;background:var(--c);cursor:pointer;border:2px solid var(--panel)}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;
+        background:var(--c);cursor:pointer;border:2px solid var(--panel)}
+  input[type=range]:focus-visible{outline:2px solid var(--acento);outline-offset:4px}
+
+  .barraInf{display:flex;justify-content:space-between;align-items:center;gap:12px;
+        margin-top:13px;flex-wrap:wrap}
+  .botonera{display:flex;gap:8px}
+  .btn{font-family:var(--f-num);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+        cursor:pointer;background:var(--panel2);color:var(--tinta2);border:1px solid var(--borde);
+        border-radius:7px;padding:8px 13px}
+  .btn:hover{color:var(--tinta)}
+  .btn:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+  .vel{display:flex;align-items:center;gap:9px;font-family:var(--f-num);
+        font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--tinta3)}
+  .vel input{width:120px;--c:var(--tinta3)}
+
+  .notas{margin-top:26px;border-top:1px solid var(--borde);padding-top:16px;
+        color:var(--tinta3);font-size:12.5px;max-width:78ch}
+  .notas p{margin:0 0 7px}
+  .notas b{color:var(--tinta2);font-weight:500}
+  #cargando{padding:40px 0;text-align:center;font-family:var(--f-num);
+        font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--tinta3)}
+  details.notas summary{cursor:pointer;color:var(--tinta2);font-family:var(--f-num);font-size:10.5px;
+        letter-spacing:.13em;text-transform:uppercase;list-style:none}
+  details.notas summary::-webkit-details-marker{display:none}
+
+  /* ===== pantalla completa: todo visible sin scroll ===== */
+  @media(min-width:1100px) and (min-height:640px){
+    body{padding:12px 16px;height:100vh;overflow:hidden}
+    .envoltorio{max-width:none;height:100%;display:flex;flex-direction:column;gap:10px}
+    .cabecera{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+    .cabecera h1{font-size:26px;margin:0}
+    .cabecera .eyebrow{margin:0}
+    .cabecera .entradilla{margin:0;font-size:12px;max-width:none;flex:1 1 100%;min-width:0;line-height:1.35}
+    #app{flex:1;min-height:0;display:grid;gap:10px;
+        grid-template-columns:minmax(0,1.25fr) minmax(0,.72fr) minmax(300px,.92fr);
+        grid-template-rows:auto minmax(0,1fr)}
+    .lecturas{grid-column:1/-1;margin:0}
+    .lectura{padding:7px 12px}
+    .lectura dd{font-size:16px}
+    .escenario{display:contents}
+    .caja{min-height:0}
+    #arena3d{flex:1;min-height:0;aspect-ratio:auto}
+    #cerebro3d{flex:1;min-height:0;aspect-ratio:auto}
+    .columna{display:flex;flex-direction:column;gap:10px;min-height:0}
+    #estado{margin:0;padding:10px 13px;min-height:66px;flex-shrink:0}
+    #diagnostico{font-size:12.5px}
+    .controles{display:contents}
+    .bloque{padding:11px 13px 12px}
+    .bloque h3{margin-bottom:8px}
+    .estimulos{flex-direction:row;flex-wrap:wrap}
+    .estimulos button{flex:1 1 45%;padding:7px 10px;font-size:12.5px}
+    .farmaco{padding:4px 0;grid-template-columns:138px 1fr 42px}
+    .nombreF{font-size:12.5px}
+    .nombreF small{font-size:9px}
+    .barraInf{margin-top:9px}
+    details.notas{grid-column:1/-1;margin:0;border:0;padding:0}
+    details.notas p{max-width:none;font-size:11.5px}
+    details.notas[open]{position:fixed;left:16px;right:16px;bottom:12px;background:var(--panel);
+        border:1px solid var(--borde);border-radius:10px;padding:12px 16px;z-index:5;max-height:45vh;overflow:auto}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="envoltorio">
+  <div class="cabecera">
+    <h1>FlyPharm</h1>
+    <p class="eyebrow">Farmacolog&#xED;a in silico &#xB7; conectoma MaleCNS v1.0 &#xB7; cuerpo flybody</p>
+    <p class="entradilla">Basado en el conectoma <b>MaleCNS v1.0</b> &#x2014; Berg et al., <i>Sexual dimorphism in the complete Drosophila male central nervous system connectome</i>, <b>Cell</b> 189:5504 (2026), HHMI Janelia FlyEM &#xB7; Cambridge &#xB7; Google Research &#x2014; y en el cuerpo <b>flybody</b>, Vaxenburg et al., <b>Nature</b> (2025).</p>
+  </div>
+
+  <div id="cargando">cargando el conectoma&#x2026;</div>
+
+  <div id="app" hidden>
+    <dl class="lecturas">
+      <div class="lectura"><dt>Neuronas activas</dt><dd id="lAct">0</dd></div>
+      <div class="lectura"><dt>Motoneuronas</dt><dd id="lMoto">0<small> / 815</small></dd></div>
+      <div class="lectura"><dt>Tiempo simulado</dt><dd id="lTiempo">0<small> ms</small></dd></div>
+      <div class="lectura"><dt>C&#xF3;mputo por paso</dt><dd id="lMs">0<small> ms</small></dd></div>
+      <div class="lectura"><dt>Umbral de disparo</dt><dd id="lUmbral">0,090</dd></div>
+    </dl>
+
+    <div class="escenario">
+      <div class="caja">
+        <header><h2>El mundo de la mosca</h2><span>cuerpo: flybody &#xB7; placa de 20 mm</span></header>
+        <div id="arena3d"><span class="pista">arrastra para girar la c&#xE1;mara</span>
+          <div id="motorBar">SALIDA MOTORA &#xB7; VS. GEMELA SOBRIA<i><b id="motorFill" style="width:41%"></b><s></s></i></div></div>
+        <div class="pieCaja"><span id="pieArena">en reposo</span><span id="pieVel">0 mm/s</span></div>
+      </div>
+      <div class="caja cerebroCaja">
+        <header><h2>Su cerebro</h2><span>somas reales &#xB7; 3D</span></header>
+        <div id="cerebro3d"><span class="pista">arrastra para girar &#xB7; rueda para acercar</span></div>
+        <div class="pieCaja"><span>cerebro arriba &#xB7; m&#xE9;dula abajo</span><span id="pieAct">0,0 % activo</span></div>
+      </div>
+    </div>
+
+    <div class="columna">
+      <div id="estado">
+        <span id="pastilla">sobria</span>
+        <span id="diagnostico">Sin f&#xE1;rmacos. La mosca vuela con normalidad.</span>
+      </div>
+      <div class="controles">
+        <div class="bloque">
+          <h3>Est&#xED;mulo</h3>
+          <div class="estimulos" id="estimulos">
+            <button data-e="nada" aria-pressed="true">Dejarla explorar</button>
+            <button data-e="izq" aria-pressed="false">Comida a la izquierda</button>
+            <button data-e="der" aria-pressed="false">Comida a la derecha</button>
+            <button data-e="amenaza" aria-pressed="false">&#x26A0; Sombra que se acerca</button>
+          </div>
+          <div class="barraInf">
+            <div class="botonera">
+              <button class="btn" id="bPausa">Pausar</button>
+              <button class="btn" id="bReset">Reiniciar</button>
+            </div>
+            <label class="vel">Velocidad
+              <input type="range" id="vel" min="2" max="40" value="20">
+              <span id="velTxt">20 pasos/s</span>
+            </label>
+          </div>
+        </div>
+        <div class="bloque">
+          <h3>Armario de f&#xE1;rmacos &#x2014; arrastra para dosificar</h3>
+          <div id="farmacos"></div>
+          <div class="barraInf">
+            <button class="btn" id="bLavar">Lavar todos los f&#xE1;rmacos</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <details class="notas">
+      <summary>&#x24D8; Qu&#xE9; es real y qu&#xE9; no</summary>
+      <p><b>Qu&#xE9; es real y qu&#xE9; no.</b> El cableado, el neurotransmisor de cada neurona y la posici&#xF3;n
+        de cada soma vienen de MaleCNS v1.0 (Janelia FlyEM + Google Research, 2026). Sobre ese grafo
+        corre un modelo de integraci&#xF3;n y disparo: cada neurona suma lo que recibe y dispara al cruzar
+        un umbral. El signo lo da su neurotransmisor &#x2014; la acetilcolina excita, el GABA y el glutamato
+        inhiben, que en mosca es lo correcto aunque en mam&#xED;feros el glutamato sea excitador.</p>
+      <p><b>D&#xF3;nde acaba el dato y empiezo yo.</b> Que la asimetr&#xED;a entre motoneuronas izquierdas y
+        derechas haga girar a la mosca es una convenci&#xF3;n m&#xED;a, no algo que el conectoma dicte. Las dosis
+        son unidades arbitrarias, no mg/kg. Y un cerebro al doble de actividad no est&#xE1; huyendo: est&#xE1;
+        convulsionando, porque un escape necesita coordinaci&#xF3;n, no ruido.</p>
+      <p><b>El cuerpo tambi&#xE9;n es real.</b> La mosca 3D es <i>flybody</i>, el modelo anat&#xF3;mico de
+        <i>Drosophila</i> de HHMI Janelia y Google DeepMind (Vaxenburg et al., <i>Nature</i> 2025,
+        licencia Apache-2.0): 67 piezas articuladas reconstruidas por micro-CT, reducidas de
+        272.550 a 52.020 tri&#xE1;ngulos. Las poses son animaci&#xF3;n m&#xED;a, no f&#xED;sica.</p>
+      <p><b>Esta mosca no siente nada.</b> No est&#xE1; consciente, no sufre y no quiere comer. Es
+        propagaci&#xF3;n de se&#xF1;al sobre un grafo.</p>
+    </details>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.152.2/three.min.js"></script>
+<script src="mosca3d.js?v=2026-09-24c"></script>
+<script>
+(async function(){
+  const $ = s => document.querySelector(s);
+  const VERSION='2026-09-24c';   // sello anticach\u00E9: cambia cuando cambien los datos
+  const [meta, datos3d] = await Promise.all([fetch('datos.json?v='+VERSION).then(r=>r.json()),
+                                             fetch('mosca3d.json?v='+VERSION).then(r=>r.json())]);
+  const aBytes = s => { const b=atob(s), u=new Uint8Array(b.length);
+    for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u.buffer; };
+  const netBuf = aBytes(meta.net), nodBuf = aBytes(meta.nodes);
+  const N = meta.N, E = meta.E;
+  let o = 0;
+  const indptr  = new Int32Array (netBuf, o, N+1); o += 4*(N+1);
+  const indices = new Uint16Array(netBuf, o, E);   o += 2*E;
+  const pesos   = new Uint16Array(netBuf, o, E);
+  o = 0;
+  const px    = new Uint16Array(nodBuf, o, N); o += 2*N;
+  const py    = new Uint16Array(nodBuf, o, N); o += 2*N;
+  const pz    = new Uint16Array(nodBuf, o, N); o += 2*N;
+  const ntg   = new Uint8Array (nodBuf, o, N); o += N;
+  const flags = new Uint8Array (nodBuf, o, N);
+
+  // normalizaci\u00F3n: cada neurona se mide contra el total de sinapsis que recibe
+  const norm = new Float32Array(N);
+  for(let j=0;j<N;j++){ let s=0; for(let k=indptr[j];k<indptr[j+1];k++) s+=pesos[k];
+                        norm[j] = s>0 ? 1/s : 0; }
+
+  const iMoto=[], iMotoI=[], iMotoD=[], iLoomI=[], iLoomD=[], iDibuja=[];
+  for(let i=0;i<N;i++){
+    const f=flags[i];
+    if(f&1){ iMoto.push(i); if(f&4) iMotoI.push(i); else if(f&8) iMotoD.push(i); }
+    if(f&2){ (f&8?iLoomD:iLoomI).push(i); }
+    if(px[i]!==65535) iDibuja.push(i);
+  }
+  const nMoto = iMoto.length;
+
+  // ---- estado de la simulaci\u00F3n ----
+  const UMBRAL0=0.090, DECAY=Math.exp(-1/5), REFRA=2;
+  const SIGNO=[+1,-1,-1,-1,+1,+1,+1,0];               // ACh GABA Glu His DA 5HT OA ?
+  function nuevoEstado(){ return {V:new Float32Array(N), disp:new Uint8Array(N), desc:new Uint8Array(N),
+                                  gan:Float32Array.from(SIGNO), umbral:UMBRAL0}; }
+  // Dos cerebros id\u00E9nticos corren a la vez con el MISMO est\u00EDmulo: la mosca que ves (S)
+  // y su gemela sobria (S0), que nunca recibe f\u00E1rmacos. Es el grupo control del ensayo:
+  // todo lo que decide la conducta es "drogada / sobria", nunca un n\u00FAmero absoluto.
+  const S=nuevoEstado(), S0=nuevoEstado();
+  const empuje=new Float32Array(N);
+  let umbral=UMBRAL0, estimulo='nada', pasos=0, msPaso=0, corriendo=true, velocidad=20;
+  let driveI=0.1, driveD=0.1, nAct0=0;
+  const AMENAZA_PASOS=44; let amenazaT=0, amenazaEco=0;   // la sombra dura ~2 s y crece; la huida sigue un poco m\u00E1s
+  const forzadas=[];                                   // estimuladas este paso, iguales para ambos
+
+  const FARMACOS=[
+    {id:'curare',        n:'Curare',         m:'bloquea acetilcolina \u00B7 63 % del cerebro', c:'#3987e5'},
+    {id:'benzodiacepina',n:'Benzodiacepina', m:'potencia GABA \u00B7 22.055 neuronas',         c:'#d95926'},
+    {id:'haloperidol',   n:'Haloperidol',    m:'bloquea dopamina \u00B7 solo 392 neuronas',    c:'#199e70'},
+    {id:'fluoxetina',    n:'Fluoxetina',     m:'potencia serotonina \u00B7 solo 48 neuronas',  c:'#c98500'},
+    {id:'cafeina',       n:'Cafe\u00EDna',        m:'baja el umbral de todo el cerebro',       c:'#3fbf3f'},
+    {id:'fipronil',      n:'Fipronil',       m:'INSECTICIDA \u00B7 bloquea GABA y glutamato',  c:'#d55181'},
+  ];
+  const dosis={}; FARMACOS.forEach(f=>dosis[f.id]=0);
+
+  function recalcular(){
+    const e=[1,1,1,1,1,1,1,0];                        // escala por neurotransmisor
+    e[4]*= 1-dosis.haloperidol;                       // dopamina
+    e[1]*= 1+2*dosis.benzodiacepina;                  // GABA potenciado
+    e[0]*= 1-dosis.curare;                            // acetilcolina
+    e[5]*= 1+2*dosis.fluoxetina;                      // serotonina
+    e[1]*= 1-dosis.fipronil; e[2]*= 1-dosis.fipronil; // GABA + glutamato
+    umbral = UMBRAL0*(1-0.35*dosis.cafeina);
+    for(let g=0;g<8;g++) S.gan[g]=SIGNO[g]*e[g];
+    S.umbral=umbral;
+    $('#lUmbral').textContent = umbral.toFixed(3).replace('.',',');
+    diagnosticar();
+  }
+
+  function elegirEstimulo(){
+    forzadas.length=0;
+    if(amenazaT>0){
+      // la sombra se expande: cada vez m\u00E1s detectores de peligro se encienden
+      const frac = 0.25 + 0.75*(1 - amenazaT/AMENAZA_PASOS);
+      for(const i of iLoomI) if(Math.random()<frac) forzadas.push(i);
+      for(const i of iLoomD) if(Math.random()<frac) forzadas.push(i);
+    }
+    {
+      // cada ojo recibe lo que tiene delante: driveI/driveD se calculan en el bucle
+      for(const i of iLoomI) if(Math.random()<driveI) forzadas.push(i);
+      for(const i of iLoomD) if(Math.random()<driveD) forzadas.push(i);
+    }
+    for(let r=0;r<40;r++) forzadas.push((Math.random()*N)|0);   // ruido de fondo
+  }
+  function pasoDe(st){
+    const {V,disp,desc,gan}=st, u=st.umbral;
+    for(let i=0;i<N;i++) empuje[i] = disp[i] ? gan[ntg[i]] : 0;
+    let nAct=0;
+    for(let j=0;j<N;j++){
+      let a=0;
+      for(let k=indptr[j],f=indptr[j+1];k<f;k++){
+        const g=empuje[indices[k]];
+        if(g!==0) a += pesos[k]*g;
+      }
+      let v = V[j]*DECAY + a*norm[j];
+      if(desc[j]>0){ v=0; desc[j]--; }
+      if(v<0) v=0;
+      const s = v>=u ? 1 : 0;
+      if(s){ v=0; desc[j]=REFRA; nAct++; }
+      V[j]=v; disp[j]=s;
+    }
+    for(const i of forzadas) disp[i]=1;
+    return nAct;
+  }
+  function paso(){
+    const t0=performance.now();
+    elegirEstimulo();
+    const a=pasoDe(S); nAct0=pasoDe(S0);
+    pasos++;
+    msPaso = msPaso*0.85 + (performance.now()-t0)*0.15;
+    return a;
+  }
+
+  // ---------------- el cerebro (3D) ----------------
+  const contC=$('#cerebro3d');
+  const renC=new THREE.WebGLRenderer({antialias:true}); renC.setPixelRatio(Math.min(devicePixelRatio,2));
+  contC.prepend(renC.domElement);
+  const sceneC=new THREE.Scene(); sceneC.background=new THREE.Color(0x080b0c);
+  const camC=new THREE.PerspectiveCamera(36, 1, 0.01, 50);
+  // Coordenadas: X lateral, Y dorso-ventral, Z del cerebro (arriba) a la m\u00E9dula (abajo).
+  // Centramos y ponemos el cerebro arriba: Three.y = -Z.
+  const nD=iDibuja.length, posC=new Float32Array(nD*3), colC=new Float32Array(nD*3);
+  const idxMotoDib=[];
+  // centro GEOM\u00C9TRICO (caja envolvente), no centroide: as\u00ED cerebro y m\u00E9dula quedan equilibrados
+  let mnx=1e9,mxx=-1e9,mny=1e9,mxy=-1e9,mnz=1e9,mxz=-1e9;
+  for(let k=0;k<nD;k++){ const i=iDibuja[k]; mnx=Math.min(mnx,px[i]); mxx=Math.max(mxx,px[i]); mny=Math.min(mny,py[i]); mxy=Math.max(mxy,py[i]); mnz=Math.min(mnz,pz[i]); mxz=Math.max(mxz,pz[i]); }
+  const cx=(mnx+mxx)/2, cy=(mny+mxy)/2, cz=(mnz+mxz)/2;
+  const escC=1/10000*2.2;
+  for(let k=0;k<nD;k++){ const i=iDibuja[k];
+    posC[k*3]=(px[i]-cx)*escC; posC[k*3+1]=-(pz[i]-cz)*escC; posC[k*3+2]=(py[i]-cy)*escC;
+    if(flags[i]&1) idxMotoDib.push(k); }
+  let radioC=0; for(let k=0;k<nD;k++){ const r=Math.hypot(posC[k*3],posC[k*3+1],posC[k*3+2]); if(r>radioC) radioC=r; }
+  const APAGADA=[0.14,0.19,0.19];
+  for(let k=0;k<nD;k++){ colC[k*3]=APAGADA[0]; colC[k*3+1]=APAGADA[1]; colC[k*3+2]=APAGADA[2]; }
+  const geoC=new THREE.BufferGeometry();
+  geoC.setAttribute('position', new THREE.BufferAttribute(posC,3));
+  geoC.setAttribute('color', new THREE.BufferAttribute(colC,3));
+  const puntos=new THREE.Points(geoC, new THREE.PointsMaterial({size:0.011, vertexColors:true, sizeAttenuation:true, transparent:true, opacity:.95}));
+  sceneC.add(puntos);
+  // motoneuronas: capa aparte, m\u00E1s grandes
+  const posM=new Float32Array(idxMotoDib.length*3), colM=new Float32Array(idxMotoDib.length*3);
+  idxMotoDib.forEach((k,j)=>{ posM[j*3]=posC[k*3]; posM[j*3+1]=posC[k*3+1]; posM[j*3+2]=posC[k*3+2]; });
+  const geoM=new THREE.BufferGeometry();
+  geoM.setAttribute('position', new THREE.BufferAttribute(posM,3));
+  geoM.setAttribute('color', new THREE.BufferAttribute(colM,3));
+  const puntosM=new THREE.Points(geoM, new THREE.PointsMaterial({size:0.032, vertexColors:true, sizeAttenuation:true, transparent:true, opacity:.98}));
+  sceneC.add(puntosM);
+  let cYaw=-0.35, cPitch=0.18, cZoom=1, cDrag=false, cx0=0, cy0=0;
+  contC.addEventListener('pointerdown', e=>{ cDrag=true; cx0=e.clientX; cy0=e.clientY; contC.style.cursor='grabbing'; });
+  addEventListener('pointerup', ()=>{ cDrag=false; contC.style.cursor='grab'; });
+  addEventListener('pointermove', e=>{ if(!cDrag) return;
+    cYaw += (e.clientX-cx0)*0.009; cPitch = Math.max(-1.4, Math.min(1.4, cPitch+(e.clientY-cy0)*0.007));
+    cx0=e.clientX; cy0=e.clientY; });
+  contC.addEventListener('wheel', e=>{ e.preventDefault(); cZoom=Math.max(0.45, Math.min(2.2, cZoom*(1+Math.sign(e.deltaY)*0.08))); }, {passive:false});
+  function colorActivo(){
+    let mx=0,c=new THREE.Color(0x8fe3da);
+    for(const f of FARMACOS) if(dosis[f.id]>mx){ mx=dosis[f.id]; c=new THREE.Color(f.c); }
+    return c;
+  }
+  function pintarCerebro(){
+    const c=colorActivo(), ca=geoC.attributes.color, cm=geoM.attributes.color;
+    for(let k=0;k<nD;k++){ const i=iDibuja[k];
+      if(S.disp[i]){ ca.array[k*3]=c.r; ca.array[k*3+1]=c.g; ca.array[k*3+2]=c.b; }
+      else { ca.array[k*3]=APAGADA[0]; ca.array[k*3+1]=APAGADA[1]; ca.array[k*3+2]=APAGADA[2]; } }
+    idxMotoDib.forEach((k,j)=>{ const on=S.disp[iDibuja[k]];
+      cm.array[j*3]=on?1:0.10; cm.array[j*3+1]=on?1:0.13; cm.array[j*3+2]=on?1:0.13; });
+    ca.needsUpdate=true; cm.needsUpdate=true;
+    const w=contC.clientWidth, h=contC.clientHeight, pr=renC.getPixelRatio();
+    if(w>0 && h>0 && (renC.domElement.width!==Math.round(w*pr) || renC.domElement.height!==Math.round(h*pr))){
+      renC.setSize(w,h,false); camC.aspect=w/h; camC.updateProjectionMatrix(); }
+    // Distancia que hace caber la esfera envolvente del cerebro en el recuadro, mire
+    // por donde mire: se usa el menor de los dos \u00E1ngulos de visi\u00F3n (vertical u horizontal).
+    const fovV=camC.fov*Math.PI/180, fovH=2*Math.atan(Math.tan(fovV/2)*camC.aspect);
+    const cDist = radioC/Math.sin(Math.min(fovV,fovH)/2)*1.04*cZoom;
+    camC.position.set(Math.sin(cYaw)*Math.cos(cPitch)*cDist, Math.sin(cPitch)*cDist, Math.cos(cYaw)*Math.cos(cPitch)*cDist);
+    camC.lookAt(0,0,0);
+    renC.render(sceneC, camC);
+  }
+
+  // ---------------- la arena (3D) ----------------
+  const mosca={x:0.5,y:0.62,ang:-Math.PI/2,v:0,alt:1,giro:0,fase:0,comiendo:false,estado:'volando'};
+  let motoEMA=0.05, motoEMA0=0.05, actEMA=0.05, actEMA0=0.05, ratioG=1, ratioLento=1, convul=false, muerta=false, sinMusculo=0, enVuelo=true;
+  const V_VUELO = 0.0140;              // crucero sobrio \u2248 280 mm/s
+  function posComida(){ return {x: estimulo==='izq'?0.20:0.80, y:0.5}; }
+  const ESC_PLACA = 2.9;                                          // tarro grande: radio 0,45 -> 1,3 en el mundo
+  const W3 = q => [ (q.x-0.5)*ESC_PLACA, (q.y-0.5)*ESC_PLACA ];   // placa -> mundo (X,Z)
+
+  const cont3d=$('#arena3d');
+  const ren=new THREE.WebGLRenderer({antialias:true}); ren.setPixelRatio(Math.min(devicePixelRatio,2));
+  ren.outputEncoding=THREE.sRGBEncoding; cont3d.prepend(ren.domElement);
+  const scene=new THREE.Scene(); scene.background=new THREE.Color(0x080b0c);
+  scene.fog=new THREE.Fog(0x080b0c, 8.5, 18);
+  scene.add(new THREE.HemisphereLight(0xcfd8e0, 0x1a1712, 0.9));
+  const sol=new THREE.DirectionalLight(0xfff2e0, 1.5); sol.position.set(1.2,2.4,0.8); scene.add(sol);
+  const contra=new THREE.DirectionalLight(0x8fe3da, 0.5); contra.position.set(-1.5,1.2,-1.4); scene.add(contra);
+  const cam=new THREE.PerspectiveCamera(40, 1, 0.01, 40);
+
+  // la placa: suelo con rejilla dibujada, borde y pared de vidrio
+  { const cv=document.createElement('canvas'); cv.width=cv.height=1024; const c=cv.getContext('2d');
+    c.fillStyle='#0d1417'; c.fillRect(0,0,1024,1024);
+    c.strokeStyle='rgba(120,160,158,.10)'; c.lineWidth=1.5;
+    for(let g=0;g<=1024;g+=44){ c.beginPath(); c.moveTo(g,0); c.lineTo(g,1024); c.moveTo(0,g); c.lineTo(1024,g); c.stroke(); }
+    const tex=new THREE.CanvasTexture(cv);
+    const suelo=new THREE.Mesh(new THREE.CircleGeometry(1.42,96), new THREE.MeshStandardMaterial({map:tex, roughness:.95}));
+    suelo.rotation.x=-Math.PI/2; scene.add(suelo);
+    const borde=new THREE.Mesh(new THREE.RingGeometry(1.41,1.435,128), new THREE.MeshBasicMaterial({color:0x4fd1c0, transparent:true, opacity:.55, side:THREE.DoubleSide}));
+    borde.rotation.x=-Math.PI/2; borde.position.y=0.002; scene.add(borde);
+    const vidrio=new THREE.Mesh(new THREE.CylinderGeometry(1.43,1.43,0.9,96,1,true),
+      new THREE.MeshStandardMaterial({color:0x8fe3da, transparent:true, opacity:.06, side:THREE.DoubleSide, roughness:.1, depthWrite:false}));
+    vidrio.position.y=0.45; scene.add(vidrio);
+    const labio=new THREE.Mesh(new THREE.TorusGeometry(1.43,0.006,8,128), new THREE.MeshBasicMaterial({color:0x4fd1c0, transparent:true, opacity:.35}));
+    labio.rotation.x=Math.PI/2; labio.position.y=0.9; scene.add(labio); }
+
+  // la fruta
+  const fruta=new THREE.Group();
+  { const g=new THREE.SphereGeometry(0.075,24,18), pa=g.attributes.position;
+    for(let i=0;i<pa.count;i++){ const s=1+0.06*Math.sin(pa.getX(i)*40)*Math.cos(pa.getZ(i)*37); pa.setXYZ(i,pa.getX(i)*s,pa.getY(i)*0.8*s,pa.getZ(i)*s); }
+    g.computeVertexNormals();
+    fruta.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:0xd9a63a, roughness:.55})));
+    const halo=new THREE.Mesh(new THREE.CircleGeometry(0.26,48), new THREE.MeshBasicMaterial({color:0xffc24d, transparent:true, opacity:.10, depthWrite:false}));
+    halo.rotation.x=-Math.PI/2; halo.position.y=0.003; fruta.add(halo); fruta.userData.halo=halo;
+    fruta.position.y=0.06; fruta.visible=false; scene.add(fruta); }
+
+  // la sombra que se acerca (el matamoscas): un disco oscuro que crece sobre la placa
+  const amenazaDisco=new THREE.Mesh(new THREE.CircleGeometry(1.45,64), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:0, depthWrite:false}));
+  amenazaDisco.rotation.x=-Math.PI/2; amenazaDisco.position.y=0.006; scene.add(amenazaDisco);
+  // la sombra de la mosca (falsa, barata)
+  const sombra=new THREE.Mesh(new THREE.CircleGeometry(0.075,32), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.4, depthWrite:false}));
+  sombra.rotation.x=-Math.PI/2; sombra.position.y=0.004; sombra.scale.set(1.9,1,1); scene.add(sombra);
+
+  // la mosca de flybody
+  const cuerpo3d = construirMosca(datos3d, THREE);
+  const mosca3d = new THREE.Group(); mosca3d.add(cuerpo3d.raiz);
+  mosca3d.rotation.order='YXZ';   // rumbo (Y, mundo) \u00B7 alabeo (X, eje del cuerpo) \u00B7 cabeceo (Z, eje lateral)
+  cuerpo3d.raiz.position.set(0.02,0,0); mosca3d.scale.setScalar(0.95); scene.add(mosca3d);
+  const pose = cuerpo3d.pose;
+  const LADOS=['left','right'], T=['T1','T2','T3'];
+  function poseVuelo(t){
+    const b = Math.sin(t*1.9)*0.95;                                   // batido de alas
+    pose('wing_left',  {wing_yaw_left: b, wing_roll_left:-0.15});
+    pose('wing_right', {wing_yaw_right:-b, wing_roll_right:0.15});
+    for(const s of LADOS) for(const k of T){                            // patas recogidas
+      pose(`femur_${k}_${s}`, {[`femur_${k}_${s}`]: -0.8});
+      pose(`tibia_${k}_${s}`, {[`tibia_${k}_${s}`]: 1.4}); }
+    pose('abdomen', {abdomen: 0.12*Math.sin(t*0.9)});
+  }
+  function poseSuelo(t, v){
+    pose('wing_left', {}); pose('wing_right', {});
+    const amp = Math.min(1, v*130)*0.45;
+    for(const s of LADOS) T.forEach((k,i)=>{                            // marcha en tr\u00EDpode
+      const g = (i + (s==='left'?0:1))%2 ? 0 : Math.PI;
+      pose(`coxa_${k}_${s}`, {[`coxa_${k}_${s}`]: Math.sin(t*2.2+g)*amp});
+      pose(`femur_${k}_${s}`, {}); pose(`tibia_${k}_${s}`, {}); });
+  }
+  function poseMuerta(){
+    pose('wing_left', {wing_yaw_left:0.5}); pose('wing_right', {wing_yaw_right:-0.5});
+    for(const s of LADOS) for(const k of T){
+      pose(`femur_${k}_${s}`, {[`femur_${k}_${s}`]: -1.5});
+      pose(`tibia_${k}_${s}`, {[`tibia_${k}_${s}`]: 2.4}); }
+  }
+  function poseComer(t){
+    pose('rostrum', {rostrum: 0.45}); pose('haustellum', {haustellum: 0.5+0.15*Math.sin(t*3)});
+  }
+  function poseReposoBoca(){ pose('rostrum', {}); pose('haustellum', {}); }
+
+  // c\u00E1mara persecutoria, con arrastre para orbitar
+  let camYaw=0.9, camPitch=0.78, arrastrando=false, px0=0, py0=0;
+  cont3d.addEventListener('pointerdown', e=>{ arrastrando=true; px0=e.clientX; py0=e.clientY; });
+  addEventListener('pointerup', ()=>arrastrando=false);
+  addEventListener('pointermove', e=>{ if(!arrastrando) return;
+    camYaw -= (e.clientX-px0)*0.008; camPitch = Math.max(0.15, Math.min(1.35, camPitch+(e.clientY-py0)*0.006));
+    px0=e.clientX; py0=e.clientY; });
+  const camPos=new THREE.Vector3(0.9,1.3,1.6), mira=new THREE.Vector3();
+  let tiempo3d=0;
+
+  function pintar3D(){
+    tiempo3d += 0.55;
+    const [wx,wz]=W3(mosca);
+    // Alturas MEDIDAS sobre el modelo: de pie las patas bajan 0,128 del origen; boca arriba, el dorso 0,123.
+    const PIE=0.128, DORSO=0.123, COPA_FRUTA=0.135;
+    const alto = muerta ? DORSO : mosca.comiendo ? COPA_FRUTA+PIE : PIE + mosca.alt*0.30;
+    mosca3d.position.set(wx, alto, wz);
+    mosca3d.rotation.set(0, -mosca.ang, 0, 'YXZ');
+    if(muerta){ mosca3d.rotation.x = Math.PI; poseMuerta(); }
+    else if(convul){ mosca3d.rotation.x=(Math.random()-0.5)*0.9; mosca3d.rotation.z=(Math.random()-0.5)*0.9; poseVuelo(tiempo3d*2.5); }
+    else if(mosca.alt>0.35){ mosca3d.rotation.x = mosca.giro*3.0;            // alabea hacia el giro
+                             mosca3d.rotation.z = -0.12*Math.min(2.2,mosca.v/V_VUELO);   // morro abajo cuanto m\u00E1s r\u00E1pido
+                             poseVuelo(tiempo3d*(0.6+0.4*Math.min(3,ratioG))); }
+    else { poseSuelo(tiempo3d, mosca.v); }
+    if(mosca.comiendo) poseComer(tiempo3d); else poseReposoBoca();
+
+    sombra.position.set(wx+mosca.alt*0.05, 0.004, wz+mosca.alt*0.07);
+    sombra.rotation.z = -mosca.ang; const se=1+0.35*mosca.alt; sombra.scale.set(1.9*se,se,1); sombra.material.opacity = muerta?0.45:0.42-0.24*mosca.alt;
+
+    if(amenazaT>0){ const k=1-amenazaT/AMENAZA_PASOS; amenazaDisco.scale.setScalar(0.12+0.9*k); amenazaDisco.material.opacity=0.35+0.4*k; }
+    else amenazaDisco.material.opacity*=0.8;
+    const comida = estimulo==='izq'||estimulo==='der';
+    fruta.visible = comida;
+    if(comida){ const [fx,fz]=W3(posComida()); fruta.position.set(fx,0.06,fz);
+      fruta.userData.halo.material.opacity = 0.08+0.05*Math.sin(pasos*0.15); }
+
+    // c\u00E1mara: sigue a la mosca desde atr\u00E1s-arriba, orbitable con el rat\u00F3n
+    const d=6.1, cy=Math.sin(camPitch)*d, ch=Math.cos(camPitch)*d;
+    // La c\u00E1mara NO gira con la mosca: orientaci\u00F3n fija en el mundo (orbitable con el rat\u00F3n)
+    // y un seguimiento muy lento del punto medio entre la mosca y el centro de la placa.
+    const foco = new THREE.Vector3(wx*0.25, alto*0.2+0.05, wz*0.25);   // encuadra la placa, la mosca se mueve dentro
+    mira.lerp(foco, 0.025);
+    const obj = new THREE.Vector3(mira.x+Math.cos(camYaw)*ch, mira.y+cy, mira.z-Math.sin(camYaw)*ch);
+    camPos.lerp(obj, 0.05); cam.position.copy(camPos); cam.lookAt(mira);
+
+    const w=cont3d.clientWidth, h=cont3d.clientHeight;
+    const pr=ren.getPixelRatio();
+    if(w>0 && h>0 && (ren.domElement.width!==Math.round(w*pr) || ren.domElement.height!==Math.round(h*pr))){
+      ren.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); }
+    ren.render(scene, cam);
+    $('#motorFill').style.width = (Math.min(1,ratioG/2.2)*100).toFixed(1)+'%';
+  }
+  const pintarArena = pintar3D;
+
+  function angDiff(a){ while(a>Math.PI) a-=2*Math.PI; while(a<-Math.PI) a+=2*Math.PI; return a; }
+
+  // ---------------- bucle ----------------
+  let ultimo=0, nAct=0;
+  function bucle(ts){
+    requestAnimationFrame(bucle);
+    if(!corriendo){ pintar3D(); pintarCerebro(); }
+    if(corriendo && ts-ultimo > 1000/velocidad){
+      ultimo=ts;
+
+      // --- qu\u00E9 ve cada ojo ---
+      let cerca=false;
+      if(estimulo==='nada'){
+        const fase=Math.sin(pasos*0.017);
+        driveI=0.22*(0.5+0.5*fase); driveD=0.22*(0.5-0.5*fase);
+      } else if(estimulo==='izq'||estimulo==='der'){
+        const f=posComida(), dx=f.x-mosca.x, dy=f.y-mosca.y, dist=Math.hypot(dx,dy);
+        const d=angDiff(Math.atan2(dy,dx)-mosca.ang);       // >0: la comida queda a la derecha
+        const olor=0.35+0.65*Math.max(0,1-dist/0.9);
+        const frente=Math.max(0,Math.cos(d));
+        driveD=olor*(0.10+0.55*Math.max(0, Math.sin(d))+0.25*frente);
+        driveI=olor*(0.10+0.55*Math.max(0,-Math.sin(d))+0.25*frente);
+        cerca = dist<0.13;
+        if(mosca.comiendo){ driveI=driveD=0.05; }
+      }
+      const huyendo = amenazaT>0 || amenazaEco>0;
+      if(amenazaT>0){ amenazaT--; if(amenazaT===0){ amenazaEco=24; marcarEstimulo(estimulo); } }
+      else if(amenazaEco>0) amenazaEco--;
+
+      nAct=paso();
+      let izq=0,der=0,tot=0,tot0=0;
+      for(const i of iMotoI){ if(S.disp[i]){izq++;tot++;} if(S0.disp[i]) tot0++; }
+      for(const i of iMotoD){ if(S.disp[i]){der++;tot++;} if(S0.disp[i]) tot0++; }
+      for(const i of iMoto) if(!(flags[i]&12)){ if(S.disp[i]) tot++; if(S0.disp[i]) tot0++; }
+
+      // --- del disparo motor al vuelo, siempre relativo a la gemela sobria ---
+      motoEMA  = motoEMA*0.75  + (tot/nMoto)*0.25;
+      motoEMA0 = motoEMA0*0.75 + (tot0/nMoto)*0.25;
+      actEMA   = actEMA*0.82   + (nAct/N)*0.18;
+      actEMA0  = actEMA0*0.82  + (nAct0/N)*0.18;
+      const ratio = motoEMA/Math.max(0.004, motoEMA0);      // 1,0 = igual que la sobria
+      ratioG = ratio;
+      const ratioAct = actEMA/Math.max(0.01, actEMA0);
+      convul = ratioAct > 2.3;                                // m\u00E1s del doble de cerebro encendido
+      const erratico = Math.max(0, Math.min(1,(ratioAct-1.2)/1.1));
+      // Sin salida motora durante ~1,5 s, la mosca muere (par\u00E1lisis total).
+      // Solo vuelve a moverse si la se\u00F1al motora se recupera de verdad (f\u00E1rmaco lavado).
+      sinMusculo = ratio < 0.25 ? sinMusculo+1 : 0;
+      if(sinMusculo > 22) muerta = true;
+      if(muerta && ratio > 0.55) muerta = false;
+      // Volar exige casi toda la salida motora, con hist\u00E9resis para que no parpadee en el umbral:
+      // despega por encima de 0,90 (sostenido) y no cae hasta bajar de 0,78.
+      ratioLento = ratioLento*0.9 + ratio*0.1;
+      if(enVuelo && ratioLento < 0.78) enVuelo = false;
+      if(!enVuelo && ratioLento > 0.90) enVuelo = true;
+      const puedeVolar = enVuelo && !convul && !muerta;
+      const torpeza = puedeVolar ? 0 : Math.max(0, Math.min(1, (0.85-ratioLento)/0.55));   // 0 = \u00E1gil, 1 = a trompicones
+
+      // aterrizar sobre la comida, o despegar/caer seg\u00FAn lo que d\u00E9 el m\u00FAsculo
+      if(cerca && !convul && mosca.alt<0.6){
+        const f=posComida(); if(Math.hypot(f.x-mosca.x,f.y-mosca.y)<0.06) mosca.comiendo=true; }
+      if(mosca.comiendo){                                     // se centra sobre la fruta y se posa encima
+        const f=posComida(), d=Math.hypot(f.x-mosca.x, f.y-mosca.y);
+        if(d>0.09) mosca.comiendo=false;                       // la fruta ya no est\u00E1 debajo: a volar
+        else { mosca.x += (f.x-mosca.x)*0.08; mosca.y += (f.y-mosca.y)*0.08; } }
+      if(!(estimulo==='izq'||estimulo==='der')) mosca.comiendo=false;
+      let altObj = mosca.comiendo ? 0 : (cerca ? 0 : (puedeVolar ? 1 : 0));
+      if(huyendo && puedeVolar){ altObj=1; mosca.comiendo=false; }
+      if(muerta) altObj=0;
+      mosca.alt += (altObj-mosca.alt)*(altObj>mosca.alt ? 0.10 : ((convul||muerta)?0.30:0.07));
+
+      let vel = Math.min(4.5, Math.pow(Math.max(0,ratio),1.45)) * V_VUELO;  // cafe\u00EDna: hasta 4,5\u00D7 el crucero
+      if((estimulo==='izq'||estimulo==='der') && !huyendo){    // aproximaci\u00F3n: frena en los \u00FAltimos mil\u00EDmetros
+        const f=posComida(), d=Math.hypot(f.x-mosca.x, f.y-mosca.y);
+        if(d<0.28) vel *= Math.max(0.30, d/0.28); }
+      if(huyendo && puedeVolar) vel*=2.1;                     // el reflejo de escape acelera
+      if(huyendo && !puedeVolar && !muerta) vel*=1.6;         // en el suelo, corretea
+      if(mosca.alt<0.5){                                       // en el suelo: anda, y anda peor cuanto menos m\u00FAsculo
+        const andar = 0.0038*Math.min(1.2, ratio/0.5);
+        const tropiezo = Math.random() < 0.06*torpeza ? 0 : 1;  // pausas y tropezones
+        vel = andar*tropiezo*(1-0.35*torpeza) + vel*0.15*mosca.alt;
+      }
+      if(mosca.comiendo) vel=0;
+      if(convul) vel=0.0006;
+      if(muerta) vel=0;
+      mosca.v = mosca.v*0.6 + vel*0.4;
+      mosca.fase += mosca.v*90;
+
+      // Rumbo: hacia el lado que recibe m\u00E1s est\u00EDmulo (convenci\u00F3n declarada en las notas),
+      // modulado por la asimetr\u00EDa motora que produce la red.
+      let giro = 0.26*(driveD-driveI)/(driveD+driveI+0.04) + 0.06*(der-izq)/Math.max(8,der+izq);
+      if(huyendo){                                             // huye del centro de la sombra
+        const away=Math.atan2(mosca.y-0.5, mosca.x-0.5);
+        giro += angDiff(away-mosca.ang)*0.22;
+      }
+      if(convul) giro = (Math.random()-0.5)*1.4;
+      if(muerta) giro = 0;
+      else {
+        giro += (Math.random()-0.5)*(0.05+0.6*torpeza);                     // tambaleo (sedaci\u00F3n)
+        if(Math.random() < 0.05*erratico) giro += (Math.random()-0.5)*1.6;    // hiperactividad: cambios de rumbo bruscos
+      }
+      // Ve venir la pared: desde 2/3 del radio vira hacia el centro, m\u00E1s cuanto m\u00E1s cerca.
+      // Solo en la huida se permite llegar a chocar.
+      { const rr=Math.hypot(mosca.x-0.5, mosca.y-0.5);
+        let cercaComida=false;
+        if(estimulo==='izq'||estimulo==='der'){ const f=posComida(); cercaComida = Math.hypot(f.x-mosca.x,f.y-mosca.y)<0.16; }
+        if(!huyendo && !cercaComida){
+          const haciaCentro=Math.atan2(0.5-mosca.y, 0.5-mosca.x);
+          if(rr>0.30){ const k=Math.min(1,(rr-0.30)/0.11); giro += angDiff(haciaCentro-mosca.ang)*0.18*k*(1+mosca.v/V_VUELO); }
+          // anticipaci\u00F3n: \u00BFd\u00F3nde estar\u00E9 en 8 pasos? si es fuera, viro ya
+          const xn=mosca.x+Math.cos(mosca.ang)*mosca.v*8, yn=mosca.y+Math.sin(mosca.ang)*mosca.v*8;
+          if(Math.hypot(xn-0.5,yn-0.5)>0.42) giro += angDiff(haciaCentro-mosca.ang)*0.40; } }
+      if(mosca.comiendo) giro=0;
+      mosca.giro = mosca.giro*0.7 + giro*0.3;
+      mosca.ang += giro;
+      mosca.x += Math.cos(mosca.ang)*mosca.v;
+      mosca.y += Math.sin(mosca.ang)*mosca.v;
+      const dx=mosca.x-0.5, dy=mosca.y-0.5, r=Math.hypot(dx,dy);
+      if(r>0.45){ mosca.x=0.5+dx/r*0.45; mosca.y=0.5+dy/r*0.45;
+        if(huyendo) mosca.ang+=Math.PI*0.7;                                   // choque de p\u00E1nico
+        else mosca.ang += angDiff(Math.atan2(-dy,-dx)-mosca.ang)*0.5; }        // roza y se aparta
+
+      mosca.estado = muerta ? 'muerta \u00B7 par\u00E1lisis total' : convul ? 'convulsionando' : mosca.comiendo ? 'comiendo' :
+          mosca.alt<0.3 ? (puedeVolar ? 'despegando' : (torpeza>0.55 ? 'en el suelo \u00B7 anda a trompicones' : 'en el suelo \u00B7 anda, no puede volar')) :
+          huyendo ? 'huyendo' : ratio>2.0 ? 'volando disparada' : ratio>1.35 ? 'volando r\u00E1pido' :
+          ratio>0.7 ? 'volando' : 'volando bajo, torpe';
+
+      $('#lAct').textContent = nAct.toLocaleString('es-ES');
+      $('#lMoto').innerHTML = tot + '<small> / '+nMoto+'</small>';
+      $('#lTiempo').innerHTML = pasos + '<small> ms</small>';
+      $('#lMs').innerHTML = msPaso.toFixed(1).replace('.',',') + '<small> ms</small>';
+      $('#pieAct').textContent = (100*nAct/N).toFixed(1).replace('.',',')+' % activo';
+      $('#pieVel').textContent = Math.round(mosca.v*20000)+' mm/s';
+      $('#pieArena').textContent = mosca.estado;
+      pintarArena();
+      pintarCerebro();
+      diagnosticar(nAct,tot);
+    }
+  }
+  window.FLY = { get motoEMA(){return motoEMA}, get motoEMA0(){return motoEMA0}, get ratio(){return ratioG}, get actEMA(){return actEMA},
+                 get v(){return mosca.v}, get alt(){return mosca.alt}, get estado(){return mosca.estado}, get muerta(){return muerta}, get ratioLento(){return ratioLento},
+                 get pos(){return [mosca.x,mosca.y]}, get comiendo(){return mosca.comiendo},
+                 get ang(){return mosca.ang}, get drive(){return [driveI,driveD]}, get alt2(){return mosca.alt}, get pasos(){return pasos},
+                 get bbox(){ const b=new THREE.Box3().setFromObject(mosca3d); return {min:[b.min.x-mosca3d.position.x,b.min.y-mosca3d.position.y,b.min.z-mosca3d.position.z], max:[b.max.x-mosca3d.position.x,b.max.y-mosca3d.position.y,b.max.z-mosca3d.position.z]}; },
+                 set cam(v){ camYaw=v[0]; camPitch=v[1]; } };
+
+  function diagnosticar(nActual,motoActual){
+    const p=$('#pastilla'), d=$('#diagnostico');
+    const activos = FARMACOS.filter(f=>dosis[f.id]>0.02);
+    let txt,col;
+    if(muerta){ txt='muerta'; col='var(--mal)';
+      d.innerHTML='Sin acetilcolina no se contrae ning\u00FAn m\u00FAsculo. <b>Par\u00E1lisis total: la mosca ha muerto.</b> Lava el f\u00E1rmaco para reiniciar.'; }
+    else if(convul){ txt='convulsi\u00F3n'; col='var(--mal)';
+      d.innerHTML='El doble de cerebro encendido que en reposo y sin freno. Esto <b>no es volar, es convulsionar</b>: sin inhibici\u00F3n no hay conducta, solo ruido.'; }
+    else if(activos.length===0){ txt='sobria'; col='var(--bien)';
+      d.innerHTML='Sin f\u00E1rmacos. La mosca vuela con normalidad.'; }
+    else if(mosca.alt<0.3 && !mosca.comiendo){ txt='en tierra'; col='var(--ojo)';
+      d.innerHTML='Bajo <b>'+activos.map(f=>f.n.toLowerCase()).join(' + ')+'</b> el m\u00FAsculo no recibe se\u00F1al para sostener el vuelo. <b>Anda a trompicones</b>: deterioro psicomotor, la se\u00F1al llega a medias.'; }
+    else if(ratioG>1.3){ txt='acelerada'; col='var(--ojo)';
+      d.innerHTML='Bajo <b>'+activos.map(f=>f.n.toLowerCase()).join(' + ')+'</b>: vuela m\u00E1s r\u00E1pido de lo normal, y cada vez con m\u00E1s cerebro encendido. Ojo a d\u00F3nde lleva eso.'; }
+    else if(ratioG<0.75){ txt='torpe'; col='var(--ojo)';
+      d.innerHTML='Bajo <b>'+activos.map(f=>f.n.toLowerCase()).join(' + ')+'</b>: vuela bajo y lento. Deterioro psicomotor: la se\u00F1al llega, pero llega a medias.'; }
+    else { txt='leve'; col='var(--ojo)';
+      d.innerHTML='Dosis de <b>'+activos.map(f=>f.n.toLowerCase()).join(' + ')+'</b> sin efecto claro sobre el vuelo. Sube la dosis o cambia de f\u00E1rmaco.'; }
+    p.textContent=txt; p.style.color=col;
+  }
+
+  // ---------------- interfaz ----------------
+  const cont=$('#farmacos');
+  for(const f of FARMACOS){
+    const row=document.createElement('div'); row.className='farmaco';
+    row.innerHTML = '<div class="nombreF" style="color:'+f.c+'">'+f.n+
+                    '<small>'+f.m+'</small></div>'+
+      '<input type="range" min="0" max="100" value="0" style="--c:'+f.c+'" aria-label="Dosis de '+f.n+'">'+
+      '<div class="valorF">0 %</div>';
+    const rng=row.querySelector('input'), val=row.querySelector('.valorF');
+    rng.addEventListener('input',()=>{ dosis[f.id]=rng.value/100;
+      val.textContent=rng.value+' %'; recalcular(); });
+    cont.appendChild(row);
+  }
+  function marcarEstimulo(e){ [...$('#estimulos').children].forEach(x=>x.setAttribute('aria-pressed', x.dataset.e===e)); }
+  $('#estimulos').addEventListener('click',ev=>{
+    const b=ev.target.closest('button'); if(!b) return;
+    if(b.dataset.e==='amenaza'){ amenazaT=AMENAZA_PASOS; marcarEstimulo('amenaza'); return; }   // evento, no estado
+    estimulo=b.dataset.e; marcarEstimulo(estimulo); mosca.comiendo=false;   // nueva comida: hay que ir a por ella
+  });
+  $('#bPausa').addEventListener('click',ev=>{ corriendo=!corriendo;
+    ev.target.textContent = corriendo?'Pausar':'Continuar'; });
+  $('#bReset').addEventListener('click',()=>{ for(const st of [S,S0]){ st.V.fill(0); st.disp.fill(0); st.desc.fill(0); }
+    muerta=false; sinMusculo=0;
+    pasos=0; mosca.x=0.5; mosca.y=0.58; mosca.ang=-Math.PI/2; });
+  $('#bLavar').addEventListener('click',()=>{
+    FARMACOS.forEach(f=>dosis[f.id]=0);
+    cont.querySelectorAll('input').forEach(r=>r.value=0);
+    cont.querySelectorAll('.valorF').forEach(v=>v.textContent='0 %');
+    recalcular(); });
+  $('#vel').addEventListener('input',ev=>{ velocidad=+ev.target.value;
+    $('#velTxt').textContent=velocidad+' pasos/s'; });
+
+  recalcular();
+  $('#cargando').hidden=true; $('#app').hidden=false;
+  requestAnimationFrame(bucle);
+})();
+</script>

@@ -1,0 +1,8 @@
+numpy>=2.0
+pandas>=2.2
+pyarrow>=15
+scipy>=1.13
+matplotlib>=3.8
+requests>=2.31
+trimesh>=4.0
+fast_simplification>=0.1.7

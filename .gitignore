@@ -1,0 +1,18 @@
+# Datos públicos: se descargan con src/00_descargar_datos.py (no se redistribuyen aquí)
+data/raw/
+data/flybody/*
+!data/flybody/LICENSE
+data/processed/
+
+# Intermedios regenerables por src/07_exportar_web.py (la app solo usa datos.json)
+web/net.bin
+web/nodes.bin
+
+# Material de trabajo
+web/mosca3d_test.html
+outputs/_orientacion.png
+outputs/post_linkedin*.md
+.claude/
+__pycache__/
+*.pyc
+.DS_Store
